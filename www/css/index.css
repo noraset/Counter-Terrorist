@@ -1,0 +1,40 @@
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #222;
+  /* Optional: dark background for contrast */
+}
+
+canvas {
+  display: block;
+}
+
+
+#scoreboard {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+#startButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  padding: 12px 24px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
