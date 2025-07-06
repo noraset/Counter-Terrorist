@@ -37,7 +37,7 @@ let enemyMoveDir = { x: 0, y: 0 };
 
 function preload() {
     // Ground is just a color, no image needed
-    this.load.image('player', 'assets/mainChar/1/idle.png'); // เปลี่ยนเป็น sprite top-down ได้
+    this.load.image('player', 'assets/player.png'); // เปลี่ยนเป็น sprite top-down ได้
     this.load.image('enemy', 'assets/Monster/1/2.png');   // enemy dummy
     this.load.image('wall', 'assets/Walls/Blue Walls/2.png'); // 50x50 wall tile
     this.load.image('bullet', 'assets/Bullets/Bullets1.png');
@@ -76,19 +76,12 @@ function create() {
         rightWall.setDisplaySize(50, 50).refreshBody();
     }
 
-    player = this.physics.add.image(400, 400, null);
-    player.setCircle(15); // 60px diameter
+    player = this.physics.add.image(400, 400, 'player');
     player.setCollideWorldBounds(true);
     player.setBounce(0.5);
     player.body.setOffset(0, 0);
     player.displayWidth = 30;
     player.displayHeight = 30;
-    // Create graphics for the circle
-    const playerCircle = this.add.graphics();
-    playerCircle.fillStyle(0x00aaff, 1); // blue color
-    playerCircle.fillCircle(0, 0, 30);
-    playerCircle.x = player.x;
-    player.y = player.y;
     // Gun sprite, positioned in front of player (adjust x/y as needed)
     const gunSprite = this.add.sprite(player.x, player.y - 100, 'gun');
     gunSprite.setOrigin(0.5, 0.7);
@@ -157,7 +150,6 @@ function create() {
 
     // Store reference for update
     player.gunSprite = gunSprite;
-    player.circleGraphics = playerCircle;
 }
 
 function update(time) {
@@ -261,31 +253,11 @@ function update(time) {
         }
     }
 
-    // Move graphics to follow player
-    const centerX = player.body.center.x;
-    const centerY = player.body.center.y;
-    player.circleGraphics.x = centerX;
-    player.circleGraphics.y = centerY;
-    // Redraw player circle and eye
-    player.circleGraphics.clear();
-    player.circleGraphics.fillStyle(0x00aaff, 1); // blue color
-    player.circleGraphics.fillCircle(0, 0, 25);
-    // Draw eye
-    const eyeDistance = 16; // distance from center to eye (double)
-    const eyeRadius = 6;    // double size
-    const eyeAngle = player.rotation - Phaser.Math.DegToRad(90); // front of player
-    const eyeX = Math.cos(eyeAngle) * eyeDistance;
-    const eyeY = Math.sin(eyeAngle) * eyeDistance;
-    player.circleGraphics.fillStyle(0xffffff, 1); // white eye
-    player.circleGraphics.fillCircle(eyeX, eyeY, eyeRadius);
-    player.circleGraphics.fillStyle(0x000000, 1); // black pupil
-    player.circleGraphics.fillCircle(eyeX, eyeY, 2.4);
-
     // Gun logic as before
     const gunDistance = -60;
     const gunAngle = player.rotation - Phaser.Math.DegToRad(90);
-    player.gunSprite.x = centerX + Math.cos(gunAngle) * gunDistance;
-    player.gunSprite.y = centerY + Math.sin(gunAngle) * gunDistance;
+    player.gunSprite.x = player.x + Math.cos(gunAngle) * gunDistance;
+    player.gunSprite.y = player.y + Math.sin(gunAngle) * gunDistance;
     player.gunSprite.rotation = player.rotation + 5;
     player.gunSprite.setFlipX(true);
 
