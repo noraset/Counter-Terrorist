@@ -80,8 +80,8 @@ function create() {
     player.setCollideWorldBounds(true);
     player.setBounce(0.5);
     player.body.setOffset(0, 0);
-    player.displayWidth = 30;
-    player.displayHeight = 30;
+    player.displayWidth = 50;
+    player.displayHeight = 50;
     // Gun sprite, positioned in front of player (adjust x/y as needed)
     const gunSprite = this.add.sprite(player.x, player.y - 100, 'gun');
     gunSprite.setOrigin(0.5, 0.7);
