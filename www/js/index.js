@@ -35,13 +35,29 @@ let lastEnemyShotTime = 0;
 let enemyMoveTimer = 0;
 let enemyMoveDir = { x: 0, y: 0 };
 
+// Monster spawn points
+const enemySpawnPoints = [
+    { x: 400, y: 100 },
+    { x: 100, y: 100 },
+];
+
 function preload() {
-    // Ground is just a color, no image needed
-    this.load.image('player', 'assets/player.png'); // เปลี่ยนเป็น sprite top-down ได้
-    this.load.image('enemy', 'assets/Monster/1/2.png');   // enemy dummy
+    this.load.image('player', 'assets/Guns/1c.png'); // เปลี่ยนเป็น sprite top-down ได้
+    // Preload all enemy walk frames for 6 types
+    for (let t = 1; t <= 6; t++) {
+        for (let i = 1; i <= 4; i++) {
+            this.load.image(`enemy${t}_${i}`, `assets/Monster/${t}/${i}.png`);
+        }
+    }
     this.load.image('wall', 'assets/Walls/Blue Walls/2.png'); // 50x50 wall tile
     this.load.image('bullet', 'assets/Bullets/Bullets1.png');
     this.load.image('gun', 'assets/Guns/1g.png'); // Load gun image
+    this.load.image('collision', 'assets/Colision Sprites/1.png');
+
+    // Preload collision effect images
+    // for (let i = 1; i <= 9; i++) {
+    //     this.load.image('collision' + i, 'assets/Colision Sprites/' + i + '.png');
+    // }
 }
 
 function create() {
@@ -80,23 +96,51 @@ function create() {
     player.setCollideWorldBounds(true);
     player.setBounce(0.5);
     player.body.setOffset(0, 0);
-    player.displayWidth = 50;
-    player.displayHeight = 50;
+    player.displayWidth = 100;
+    player.displayHeight = 100;
     // Gun sprite, positioned in front of player (adjust x/y as needed)
     const gunSprite = this.add.sprite(player.x, player.y - 100, 'gun');
-    gunSprite.setOrigin(0.5, 0.7);
+    gunSprite.setOrigin(0.5, -0.5);
     this.cameras.main.startFollow(player);
     this.physics.add.collider(player, walls);
     enemies = [];
-    const x = Phaser.Math.Between(100, 400);
-    const y = Phaser.Math.Between(100, 400);
-    const enemy = this.physics.add.sprite(x, y, 'enemy');
-    enemy.setBounce(0.5);
-    enemy.setCollideWorldBounds(true);
-    enemy.body.setSize(30, 30);
-    enemy.body.setOffset(30, 30);
-    this.physics.add.collider(enemy, walls);
-    enemies.push(enemy);
+
+    // Draw green box at each spawn point
+    const spawnBoxGraphics = this.add.graphics();
+    spawnBoxGraphics.lineStyle(3, 0x00ff00, 1);
+    enemySpawnPoints.forEach(pt => {
+        spawnBoxGraphics.strokeRect(pt.x - 25, pt.y - 25, 50, 50);
+    });
+
+    // Create walk animation for all 6 enemy types
+    for (let t = 1; t <= 6; t++) {
+        this.anims.create({
+            key: `enemy${t}_walk`,
+            frames: [
+                { key: `enemy${t}_1` },
+                { key: `enemy${t}_2` },
+                { key: `enemy${t}_3` },
+                { key: `enemy${t}_4` }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+    }
+
+    // Spawn enemies at each spawn point
+    enemies = [];
+    enemySpawnPoints.forEach(pt => {
+        const type = Phaser.Math.Between(1, 6);
+        const enemy = this.physics.add.sprite(pt.x, pt.y, `enemy${type}_1`);
+        enemy.setBounce(0.5);
+        enemy.setCollideWorldBounds(true);
+        enemy.body.setSize(30, 30);
+        enemy.body.setOffset(30, 30);
+        this.physics.add.collider(enemy, walls);
+        enemy.anims.play(`enemy${type}_walk`);
+        enemy.enemyType = type;
+        enemies.push(enemy);
+    });
 
     cursors = this.input.keyboard.createCursorKeys();
     keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -128,13 +172,25 @@ function create() {
     });
 
     // Shoot on pointerdown
-    // this.input.on('pointerdown', (pointer) => {
-    //     shootBullet.call(this, pointer);
-    // });
+    this.input.on('pointerdown', (pointer) => {
+        shootBullet.call(this, pointer);
+    });
+
 
     // Bullet-enemy collision
     this.physics.add.overlap(bullets, enemies, (bullet, enemy) => {
         bullet.destroy();
+        // Particle effect: use random collision sprite
+        const emitter = this.add.particles(0, 0, 'collision', {
+            x: enemy.x,
+            y: enemy.y,
+            speed: { min: -200, max: 200 },
+            scale: { start: 0.5, end: 0 },
+            blendMode: 'ADD',
+        });
+        this.time.delayedCall(100, () => {
+            emitter.stop();
+        }, [], this);
         enemy.destroy();
         score += 1;
         if (this.scoreText) {
@@ -150,6 +206,26 @@ function create() {
 
     // Store reference for update
     player.gunSprite = gunSprite;
+
+    // สร้าง enemy ใหม่ทุก 2 วินาที
+    // this.time.addEvent({
+    //     delay: 2000,
+    //     loop: true,
+    //     callback: () => {
+    //         // สุ่มจุด spawn
+    //         const pt = Phaser.Utils.Array.GetRandom(enemySpawnPoints);
+    //         const type = Phaser.Math.Between(1, 6);
+    //         const enemy = this.physics.add.sprite(pt.x, pt.y, `enemy${type}_1`);
+    //         enemy.setBounce(0.5);
+    //         enemy.setCollideWorldBounds(true);
+    //         enemy.body.setSize(30, 30);
+    //         enemy.body.setOffset(30, 30);
+    //         this.physics.add.collider(enemy, walls);
+    //         enemy.anims.play(`enemy${type}_walk`);
+    //         enemy.enemyType = type;
+    //         enemies.push(enemy);
+    //     }
+    // });
 }
 
 function update(time) {
@@ -169,18 +245,15 @@ function update(time) {
     // Rotate player and gun to face mouse pointer
     const pointer = this.input.activePointer;
     const playerAngle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
-    player.setAngle(Phaser.Math.RadToDeg(playerAngle) - 90);
-    // Gun follows same angle (already a child, so rotates with container)
-
-    // Rotate enemy to face player
-    const mainEnemy = enemies[0];
-    if (mainEnemy && mainEnemy.active) {
-        const enemyAngle = Phaser.Math.Angle.Between(mainEnemy.x, mainEnemy.y, player.x, player.y);
-        mainEnemy.setAngle(Phaser.Math.RadToDeg(enemyAngle) - 90);
-    }
+    player.gunSprite.rotation = playerAngle - Math.PI / 2;
+    // Gun follows player position
+    const gunDistance = -60;
+    player.gunSprite.x = player.x + Math.cos(playerAngle) * gunDistance;
+    player.gunSprite.y = player.y + Math.sin(playerAngle) * gunDistance;
+    player.gunSprite.setFlipX(true);
 
     // Access scoreText from the scene (this)
-    enemies.forEach((enemy) => {
+    enemies.forEach((enemy, idx) => {
         if (enemy.x < -50 || enemy.x > 850 || enemy.y < -50 || enemy.y > 650) {
             // เพิ่มคะแนนเมื่อศัตรูตกฉาก
             score += 1;
@@ -205,13 +278,16 @@ function update(time) {
         player.body.height
     );
     // Enemies
-    enemies.forEach((enemy) => {
+    enemies.forEach((enemy, idx) => {
+        if (!enemy.active) return;
         debugGraphics.strokeRect(
             enemy.body.x,
             enemy.body.y,
             enemy.body.width,
             enemy.body.height
         );
+        const enemyAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+        enemy.setAngle(Phaser.Math.RadToDeg(enemyAngle) - 90);
     });
 
     // Clean up bullets that go off screen
@@ -235,40 +311,39 @@ function update(time) {
     }, this);
 
     // Enemy AI: random movement and shoot at player
-    const enemy = enemies[0];
-    if (enemy && enemy.active) {
+    enemies.forEach((enemy, idx) => {
+        if (!enemy.active) return;
         // Random movement: change direction every 1s
-        if (time > enemyMoveTimer) {
+        if (!enemy.moveTimer || time > enemy.moveTimer) {
             const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-            enemyMoveDir.x = Math.cos(angle);
-            enemyMoveDir.y = Math.sin(angle);
-            enemyMoveTimer = time + 1000;
+            enemy.moveDir = { x: Math.cos(angle), y: Math.sin(angle) };
+            enemy.moveTimer = time + 1000;
         }
-        enemy.setVelocity(enemyMoveDir.x * 100, enemyMoveDir.y * 100);
+        enemy.setVelocity(enemy.moveDir.x * 100, enemy.moveDir.y * 100);
 
         // Shoot at player every 1.2s
-        if (time > lastEnemyShotTime + 1200) {
+        if (!enemy.lastShotTime) enemy.lastShotTime = 0;
+        if (time > enemy.lastShotTime + 1200) {
             // shootEnemyBullet.call(this, enemy, player);
-            lastEnemyShotTime = time;
+            enemy.lastShotTime = time;
         }
-    }
-
-    // Gun logic as before
-    const gunDistance = -60;
-    const gunAngle = player.rotation - Phaser.Math.DegToRad(90);
-    player.gunSprite.x = player.x + Math.cos(gunAngle) * gunDistance;
-    player.gunSprite.y = player.y + Math.sin(gunAngle) * gunDistance;
-    player.gunSprite.rotation = player.rotation + 5;
-    player.gunSprite.setFlipX(true);
+    });
 
     // Flip gun image if aiming left
-    // let deg = Phaser.Math.RadToDeg(playerAngle);
-    // deg = (deg + 360) % 360; // Normalize
-    // if (deg > 90 && deg < 270) {
-    //     player.gunSprite.setFlipX(true);
-    // } else {
-    //     player.gunSprite.setFlipX(false);
-    // }
+    let deg = Phaser.Math.RadToDeg(playerAngle);
+    deg = (deg + 360) % 360; // Normalize
+    if (deg > 90 && deg < 270) {
+        player.setFlipX(true);
+        player.gunSprite.setFlipX(true);
+    } else {
+        player.setFlipX(false);
+        player.gunSprite.setFlipX(false);
+    }
+
+    // ใน update()
+    if (pointer.isDown) {
+        shootBullet.call(this, pointer);
+    }
 }
 
 function bop(p) {
@@ -289,13 +364,21 @@ function shootBullet(pointer) {
     const now = this.time.now;
     if (now - lastShotTime < 200) return; // Fire rate limit
     lastShotTime = now;
-    const bullet = bullets.get(player.x, player.y);
+
+    // Calculate direction
+    const angle = Phaser.Math.Angle.Between(player.gunSprite.x, player.gunSprite.y, pointer.worldX, pointer.worldY);
+
+    // Offset the bullet spawn point a bit further from the gun tip
+    const offset = 150; // ปรับระยะห่างจุดปล่อยกระสุน
+    const spawnX = player.gunSprite.x + Math.cos(angle) * offset;
+    const spawnY = player.gunSprite.y + Math.sin(angle) * offset;
+
+    const bullet = bullets.get(spawnX, spawnY);
     if (!bullet) return;
     bullet.setActive(true);
     bullet.setVisible(true);
-    bullet.body.reset(player.x, player.y);
-    // Calculate direction
-    const angle = Phaser.Math.Angle.Between(player.x, player.y, pointer.worldX, pointer.worldY);
+    bullet.body.reset(spawnX, spawnY);
+
     this.physics.velocityFromRotation(angle, bulletSpeed, bullet.body.velocity);
     bullet.setCollideWorldBounds(false);
     // Set bullet rotation (convert radians to degrees)
